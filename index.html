@@ -809,39 +809,98 @@
           }
         };
 
-        // GOOGLE SHEETS NETWORK SYNC FUNCTIONS
         const fetchFromSheets = async () => {
-          if (!sheetsConfig.value.webAppUrl) {
+          let url = (sheetsConfig.value.webAppUrl || '').trim();
+          if (!url) {
             triggerToast('URL Manquante', 'Veuillez saisir l\'URL de votre Apps Script dans l\'onglet Google Sheets.', 'error');
             return;
           }
+
+          if (url.includes('/projects/') || url.includes('/edit')) {
+            triggerToast('URL Incorrecte', 'Utilisez l\'URL du Déploiement Web App (ex: https://script.google.com/macros/s/.../exec) et non l\'URL de l\'éditeur Apps Script.', 'error');
+            return;
+          }
+
           isSyncing.value = true;
           try {
-            const res = await fetch(sheetsConfig.value.webAppUrl);
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
             const data = await res.json();
             
             const newInv = {};
+
+            const parseCardId = (col0, col1) => {
+              const s0 = String(col0 || '').trim().toUpperCase();
+              const s1 = String(col1 || '').trim().toUpperCase();
+
+              if (/^[A-Z]{2,4}$/.test(s0) && !isNaN(parseInt(s1, 10))) {
+                return { code: s0, num: parseInt(s1, 10) };
+              }
+
+              const match0 = s0.match(/^([A-Z]{2,4})[\s\-_]*(\d+)$/);
+              if (match0) {
+                return { code: match0[1], num: parseInt(match0[2], 10) };
+              }
+
+              const foundCountry = countries.value.find(c => c.name.toUpperCase() === s0 || c.code === s0);
+              if (foundCountry && !isNaN(parseInt(s1, 10))) {
+                return { code: foundCountry.code, num: parseInt(s1, 10) };
+              }
+
+              return null;
+            };
+
+            const parseQty = (val) => {
+              if (val === true || val === 'TRUE' || val === 'true') return 1;
+              if (val === false || val === 'FALSE' || val === 'false') return 0;
+              if (typeof val === 'number') return Math.max(0, Math.floor(val));
+              
+              const str = String(val || '').trim().toUpperCase();
+              if (!str || str === '0' || str === 'MANQUANTE' || str === 'NON' || str === 'NO') return 0;
+              if (str === 'X' || str === 'V' || str === 'OUI' || str === 'YES' || str === 'OK' || str === 'POSSEDEE' || str === '1') return 1;
+              if (str === 'DOUBLE') return 2;
+              
+              const parsed = parseInt(str, 10);
+              return isNaN(parsed) ? 0 : Math.max(0, parsed);
+            };
+
             if (Array.isArray(data)) {
-              for (let i = 1; i < data.length; i++) {
+              for (let i = 0; i < data.length; i++) {
                 const row = data[i];
-                if (Array.isArray(row) && row.length >= 3) {
-                  const country = String(row[0]).trim().toUpperCase();
-                  const num = parseInt(row[1], 10);
-                  const qty = parseInt(row[2], 10);
-                  if (country && !isNaN(num) && !isNaN(qty)) {
-                    newInv[`${country}_${num}`] = qty;
+                if (!Array.isArray(row) || row.length === 0) continue;
+
+                const cardId = parseCardId(row[0], row[1]);
+                if (cardId) {
+                  let rawQty = 0;
+                  if (/^[A-Z]{2,4}$/.test(String(row[0]).trim().toUpperCase()) && !isNaN(parseInt(row[1], 10))) {
+                    rawQty = row[2] !== undefined ? row[2] : row[3];
+                  } else {
+                    rawQty = row[1] !== undefined ? row[1] : row[2];
                   }
+
+                  const qty = parseQty(rawQty);
+                  const key = `${cardId.code}_${cardId.num}`;
+                  newInv[key] = qty;
                 }
               }
               inventory.value = newInv;
             } else if (data && typeof data === 'object') {
-              inventory.value = data;
+              const cleanObj = {};
+              for (const k in data) {
+                cleanObj[k] = parseQty(data[k]);
+              }
+              inventory.value = cleanObj;
             }
-            
-            triggerToast('Synchronisation Réussie', 'Données chargées depuis Google Sheets !', 'success');
+
+            const loadedCount = Object.keys(inventory.value).length;
+            if (loadedCount > 0) {
+              triggerToast('Synchronisation Réussie', `${loadedCount} carte(s) chargée(s) depuis Google Sheets !`, 'success');
+            } else {
+              triggerToast('Aucune donnée trouvée', 'La feuille a été lue mais aucune carte n\'a pu être identifiée.', 'warning');
+            }
           } catch(err) {
             console.error(err);
-            triggerToast('Erreur de Chargement', 'Vérifiez l\'URL Apps Script et le paramètre "Qui a accès : N\'importe qui".', 'error');
+            triggerToast('Erreur de Chargement', 'Vérifiez l\'URL Web App (doit se terminer par /exec) et l\'accès "N\'importe qui".', 'error');
           } finally {
             isSyncing.value = false;
           }
@@ -1026,9 +1085,9 @@
           triggerToast('Copié !', message, 'success');
         };
 
-        // GOOGLE APPS SCRIPT CODE TEMPLATE
         const appScriptCode = ref(`function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Collection") || ss.getSheets()[0];
   var data = sheet.getDataRange().getValues();
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
@@ -1036,7 +1095,8 @@
 
 function doPost(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Collection") || ss.getSheets()[0];
     var payload = JSON.parse(e.postData.contents);
     
     sheet.clear();
