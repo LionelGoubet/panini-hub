@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panini Collection Hub - Suivi & Échanges</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panini: {
+              red: '#e52521',
+              yellow: '#ffcc00',
+              blue: '#0055a5',
+              dark: '#121826',
+              card: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* Custom Scrollbars and Visual Enhancements */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    .gold-gradient {
+      background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
+    }
+    .badge-shiny {
+      box-shadow: 0 0 12px rgba(255, 204, 0, 0.4);
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased selection:bg-amber-500 selection:text-slate-900">
+
+  <div id="app" class="min-h-full flex flex-col justify-between">
+    
+    <!-- HEADER NAVBAR -->
+    <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          
+          <!-- Logo & Title -->
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 via-amber-500 to-yellow-400 flex items-center justify-center font-black text-xl text-slate-950 shadow-lg shadow-amber-500/20">
+              P
+            </div>
+            <div>
+              <h1 class="font-extrabold text-lg text-white tracking-wide flex items-center gap-2">
+                Panini Hub
+                <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">Pro Collector</span>
+              </h1>
+              <p class="text-xs text-slate-400">Gestionnaire de Collection & Échanges</p>
+            </div>
+          </div>
+
+          <!-- Quick Navigation Tabs -->
+          <nav class="hidden md:flex space-x-1 bg-slate-900/60 p-1 rounded-xl border border-slate-700/50">
+            <button 
+              @click="activeTab = 'album'"
+              :class="activeTab === 'album' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-300 hover:text-white hover:bg-slate-800'"
+              class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+              <i data-lucide="book-open" class="w-4 h-4"></i> Album
+            </button>
+            <button 
+              @click="activeTab = 'quick-action'"
+              :class="activeTab === 'quick-action' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-300 hover:text-white hover:bg-slate-800'"
+              class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i> Saisie Rapide (+ / -)
+            </button>
+            <button 
+              @click="activeTab = 'trade'"
+              :class="activeTab === 'trade' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-300 hover:text-white hover:bg-slate-800'"
+              class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2 relative">
+              <i data-lucide="repeat" class="w-4 h-4"></i> Mode Échange
+              <span v-if="totalDuplicatesCount > 0" class="ml-1 px-1.5 py-0.2 text-[10px] bg-red-500 text-white rounded-full font-bold">
+                {{ totalDuplicatesCount }}
+              </span>
+            </button>
+            <button 
+              @click="activeTab = 'sync'"
+              :class="activeTab === 'sync' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-300 hover:text-white hover:bg-slate-800'"
+              class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Google Sheets
+            </button>
+          </nav>
+
+          <!-- Stat Summary Header Widget -->
+          <div class="hidden lg:flex items-center gap-4 border-l border-slate-700 pl-4">
+            <div class="text-right">
+              <div class="text-xs text-slate-400">Progression Globale</div>
+              <div class="text-sm font-extrabold text-amber-400">{{ overallProgress }}%</div>
+            </div>
+            <div class="w-24 bg-slate-700 rounded-full h-2.5 overflow-hidden">
+              <div class="bg-amber-400 h-2.5 rounded-full transition-all duration-500" :style="{ width: overallProgress + '%' }"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
+      <!-- Mobile Sub-Menu -->
+      <div class="md:hidden flex border-t border-slate-700/60 bg-slate-900/90 divide-x divide-slate-800">
+        <button @click="activeTab = 'album'" :class="{'text-amber-400 bg-slate-800/80': activeTab === 'album'}" class="flex-1 py-2.5 text-xs text-center font-medium flex flex-col items-center justify-center gap-1 text-slate-300">
+          <i data-lucide="book-open" class="w-4 h-4"></i> Album
+        </button>
+        <button @click="activeTab = 'quick-action'" :class="{'text-amber-400 bg-slate-800/80': activeTab === 'quick-action'}" class="flex-1 py-2.5 text-xs text-center font-medium flex flex-col items-center justify-center gap-1 text-slate-300">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i> Ajout/Retrait
+        </button>
+        <button @click="activeTab = 'trade'" :class="{'text-amber-400 bg-slate-800/80': activeTab === 'trade'}" class="flex-1 py-2.5 text-xs text-center font-medium flex flex-col items-center justify-center gap-1 text-slate-300 relative">
+          <i data-lucide="repeat" class="w-4 h-4"></i> Échanges
+        </button>
+        <button @click="activeTab = 'sync'" :class="{'text-amber-400 bg-slate-800/80': activeTab === 'sync'}" class="flex-1 py-2.5 text-xs text-center font-medium flex flex-col items-center justify-center gap-1 text-slate-300">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Sheets
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1">
+
+      <!-- Global Toast Message -->
+      <transition enter-active-class="transition duration-300 ease-out" enter-from-class="transform opacity-0 translate-y-2" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition duration-200 ease-in" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-2">
+        <div v-if="toast.show" class="fixed bottom-5 right-5 z-50 max-w-sm w-full bg-slate-800 border-l-4 rounded-xl shadow-2xl p-4 flex items-start gap-3" :class="toast.type === 'success' ? 'border-emerald-500' : toast.type === 'error' ? 'border-red-500' : 'border-amber-500'">
+          <i v-if="toast.type === 'success'" data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"></i>
+          <i v-else-if="toast.type === 'error'" data-lucide="alert-circle" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+          <i v-else data-lucide="info" class="w-5 h-5 text-amber-400 shrink-0 mt-0.5"></i>
+          <div class="flex-1">
+            <h4 class="text-sm font-bold text-white">{{ toast.title }}</h4>
+            <p class="text-xs text-slate-300 mt-0.5">{{ toast.message }}</p>
+          </div>
+          <button @click="toast.show = false" class="text-slate-400 hover:text-white">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </transition>
+
+      <!-- Stats Dashboard Header -->
+      <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0">
+            <i data-lucide="grid" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-400 font-medium">Total Album</div>
+            <div class="text-xl font-bold text-white">{{ totalCardsInAlbum }} <span class="text-xs text-slate-400 font-normal">cartes</span></div>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <i data-lucide="check-square" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-400 font-medium">Possédées</div>
+            <div class="text-xl font-bold text-emerald-400">{{ totalUniqueOwned }} <span class="text-xs text-slate-400 font-normal">({{ overallProgress }}%)</span></div>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
+            <i data-lucide="clock" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-400 font-medium">Manquantes</div>
+            <div class="text-xl font-bold text-amber-400">{{ totalMissingCount }} <span class="text-xs text-slate-400 font-normal">restantes</span></div>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center shrink-0">
+            <i data-lucide="layers" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-400 font-medium">Doubles (Dispo écho)</div>
+            <div class="text-xl font-bold text-red-400">{{ totalDuplicatesCount }} <span class="text-xs text-slate-400 font-normal">cartes</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 1: ALBUM VIEW -->
+      <section v-if="activeTab === 'album'" class="space-y-6">
+        
+        <!-- Controls & Filters Bar -->
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-4 justify-between">
+          
+          <!-- Country / Category Selector -->
+          <div class="flex items-center gap-3 flex-wrap">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pays / Section :</label>
+            <select v-model="selectedCountryCode" class="bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              <option value="ALL">🌟 Tous les pays (Album complet)</option>
+              <option v-for="c in countries" :key="c.code" :value="c.code">
+                {{ c.flag }} {{ c.name }} ({{ c.code }}) - {{ getCountryOwnedCount(c.code) }}/{{ c.cardCount }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Status Filter Pills & Search -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            
+            <div class="relative">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+              <input v-model="searchQuery" type="text" placeholder="Chercher n° (ex: FRA 10)..." class="bg-slate-900 border border-slate-700 pl-9 pr-3 py-2 text-sm rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none w-full sm:w-48">
+            </div>
+
+            <!-- Filter Status -->
+            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs font-semibold">
+              <button @click="filterStatus = 'all'" :class="filterStatus === 'all' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded-lg transition">
+                Toutes
+              </button>
+              <button @click="filterStatus = 'missing'" :class="filterStatus === 'missing' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded-lg transition">
+                Manquantes (0)
+              </button>
+              <button @click="filterStatus = 'owned'" :class="filterStatus === 'owned' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded-lg transition">
+                Avoir (&ge;1)
+              </button>
+              <button @click="filterStatus = 'duplicate'" :class="filterStatus === 'duplicate' ? 'bg-red-500 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded-lg transition">
+                Doubles (&ge;2)
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Country Cards Grids -->
+        <div v-for="country in filteredCountries" :key="country.code" class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-lg">
+          
+          <!-- Country Header -->
+          <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">{{ country.flag }}</span>
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  {{ country.name }}
+                  <span class="text-xs px-2 py-0.5 rounded-md bg-slate-700 text-slate-300 font-mono">{{ country.code }}</span>
+                </h3>
+                <p class="text-xs text-slate-400">
+                  {{ getCountryOwnedCount(country.code) }} sur {{ country.cardCount }} possédées 
+                  <span v-if="getCountryDuplicatesCount(country.code) > 0" class="text-red-400 font-semibold ml-1">
+                    ({{ getCountryDuplicatesCount(country.code) }} double<span v-if="getCountryDuplicatesCount(country.code) > 1">s</span>)
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Mini Progress Ring / Percentage -->
+            <div class="flex items-center gap-2">
+              <div class="text-xs font-bold text-slate-300">
+                {{ Math.round((getCountryOwnedCount(country.code) / country.cardCount) * 100) }}%
+              </div>
+              <div class="w-16 bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-700">
+                <div class="bg-gradient-to-r from-amber-500 to-emerald-400 h-2 rounded-full" :style="{ width: ((getCountryOwnedCount(country.code) / country.cardCount) * 100) + '%' }"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cards Grid for this Country -->
+          <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5">
+            <div 
+              v-for="cardNum in getCardsForCountry(country)" 
+              :key="country.code + '_' + cardNum"
+              @click="quickIncrement(country.code, cardNum)"
+              @contextmenu.prevent="quickDecrement(country.code, cardNum)"
+              :class="getCardGridClass(country.code, cardNum)"
+              class="relative rounded-xl border p-2 flex flex-col items-center justify-between cursor-pointer transition-all duration-150 select-none group min-h-[72px]">
+              
+              <!-- Card Number ID -->
+              <span class="text-xs font-black tracking-wider font-mono opacity-80 group-hover:scale-110 transition-transform">
+                {{ country.code }} {{ cardNum }}
+              </span>
+
+              <!-- Status Badge / Quantity -->
+              <div class="my-1 flex items-center justify-center">
+                <span v-if="getQuantity(country.code, cardNum) === 0" class="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                  <i data-lucide="minus" class="w-3 h-3"></i> Manque
+                </span>
+                <span v-else-if="getQuantity(country.code, cardNum) === 1" class="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i> 1
+                </span>
+                <span v-else class="text-xs font-black px-1.5 py-0.5 rounded-full bg-red-500 text-white shadow">
+                  x{{ getQuantity(country.code, cardNum) }} (+{{ getQuantity(country.code, cardNum) - 1 }})
+                </span>
+              </div>
+
+              <!-- Action Toolbar on Hover / Touch -->
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button @click.stop="quickDecrement(country.code, cardNum)" class="p-1 rounded bg-slate-900/80 hover:bg-red-600 text-white text-[10px]" title="Enlever 1 (-1)">
+                  -1
+                </button>
+                <button @click.stop="quickIncrement(country.code, cardNum)" class="p-1 rounded bg-slate-900/80 hover:bg-emerald-600 text-white text-[10px]" title="Ajouter 1 (+1)">
+                  +1
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <div v-if="filteredCountries.length === 0" class="text-center py-12 bg-slate-800/40 rounded-2xl border border-slate-700">
+          <i data-lucide="search-x" class="w-12 h-12 text-slate-500 mx-auto mb-3"></i>
+          <p class="text-slate-300 font-medium">Aucune carte ou pays ne correspond à vos filtres.</p>
+          <button @click="resetFilters" class="mt-3 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs rounded-xl transition">
+            Réinitialiser les filtres
+          </button>
+        </div>
+
+      </section>
+
+      <!-- TAB 2: MODE D'AJOUT ET RETRAIT FACILE -->
+      <section v-if="activeTab === 'quick-action'" class="max-w-4xl mx-auto space-y-6">
+        
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+          <h2 class="text-xl font-bold text-white mb-1 flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-6 h-6 text-amber-400"></i> Mode Saisie Rapide (Ajouter & Enlever)
+          </h2>
+          <p class="text-xs text-slate-400 mb-6">Mettez à jour rapidement vos stocks après l'ouverture de nouveaux paquets ou la réalisation d'échanges.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Method 1: Target Single Card -->
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-700/80 flex flex-col justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-amber-400 mb-4 flex items-center gap-2">
+                  <i data-lucide="target" class="w-4 h-4"></i> Option 1 : Saisie Unitaire par Pays
+                </h3>
+
+                <!-- Country Select -->
+                <div class="mb-4">
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">1. Sélection du Pays / Équipe :</label>
+                  <select v-model="quickForm.countryCode" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <option v-for="c in countries" :key="c.code" :value="c.code">
+                      {{ c.flag }} {{ c.name }} ({{ c.code }})
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Number Input -->
+                <div class="mb-4">
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">2. Numéro de la Carte :</label>
+                  <div class="flex items-center gap-2">
+                    <span class="px-3 py-2.5 bg-slate-800 border border-slate-700 text-amber-400 font-mono font-bold rounded-xl text-sm">
+                      {{ quickForm.countryCode }}
+                    </span>
+                    <input 
+                      v-model.number="quickForm.number" 
+                      @keyup.enter="applySingleCard('add')"
+                      type="number" 
+                      min="1" 
+                      :max="getSelectedCountryMaxCard()" 
+                      placeholder="ex: 12" 
+                      class="flex-1 bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm rounded-xl text-white font-mono font-bold placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-1">Numéros autorisés : 1 à {{ getSelectedCountryMaxCard() }}</p>
+                </div>
+
+                <!-- Current Quantity Preview -->
+                <div v-if="quickForm.number" class="mb-4 p-3 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-between text-xs">
+                  <span class="text-slate-300">Quantité actuelle en stock :</span>
+                  <span class="font-bold px-2 py-0.5 rounded bg-slate-700 text-white font-mono">
+                    {{ getQuantity(quickForm.countryCode, quickForm.number) }} exemplaire(s)
+                  </span>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="grid grid-cols-2 gap-3 pt-2">
+                <button 
+                  @click="applySingleCard('remove')" 
+                  :disabled="!quickForm.number || getQuantity(quickForm.countryCode, quickForm.number) === 0"
+                  class="w-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 disabled:opacity-40 disabled:hover:bg-red-600/20 font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="minus-circle" class="w-4 h-4"></i> Enlever (-1)
+                </button>
+                <button 
+                  @click="applySingleCard('add')" 
+                  :disabled="!quickForm.number"
+                  class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold py-2.5 px-3 rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-1.5">
+                  <i data-lucide="plus-circle" class="w-4 h-4"></i> Ajouter (+1)
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Method 2: Bulk Entry Text Area -->
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-700/80 flex flex-col justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-amber-400 mb-2 flex items-center gap-2">
+                  <i data-lucide="layers" class="w-4 h-4"></i> Option 2 : Ajout / Retrait en Masse (Multiples)
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">Collez ou tapez une liste séparée par des espaces ou virgules.</p>
+
+                <div class="mb-4">
+                  <textarea 
+                    v-model="bulkText" 
+                    rows="5" 
+                    placeholder="Exemple :
+FRA 1, FRA 4, FRA 12, ARG 10, BRA 7
+ou simplement : 
+FRA 1 4 12 ARG 10" 
+                    class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                  </textarea>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <button 
+                  @click="processBulkText('remove')" 
+                  :disabled="!bulkText.trim()"
+                  class="w-full bg-slate-800 hover:bg-red-600/80 border border-slate-700 hover:border-red-500 text-red-400 hover:text-white font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="minus" class="w-4 h-4"></i> Tout Enlever (-1)
+                </button>
+                <button 
+                  @click="processBulkText('add')" 
+                  :disabled="!bulkText.trim()"
+                  class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-2.5 px-3 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5">
+                  <i data-lucide="plus" class="w-4 h-4"></i> Tout Ajouter (+1)
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Recent Activity Log -->
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="history" class="w-4 h-4 text-slate-400"></i> Historique des modifications récentes
+            </h3>
+            <button @click="activityLog = []" v-if="activityLog.length > 0" class="text-[11px] text-slate-400 hover:text-red-400 transition">
+              Effacer l'historique
+            </button>
+          </div>
+
+          <div v-if="activityLog.length === 0" class="text-xs text-slate-500 italic py-3 text-center">
+            Aucune action récente. Vos ajouts et retraits s'afficheront ici.
+          </div>
+
+          <div v-else class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <div v-for="(log, idx) in activityLog" :key="idx" class="flex items-center justify-between bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/50 text-xs">
+              <div class="flex items-center gap-2">
+                <span :class="log.action === 'add' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'" class="px-2 py-0.5 rounded font-mono font-bold text-[10px] border">
+                  {{ log.action === 'add' ? '+ AJOUT' : '- RETRAIT' }}
+                </span>
+                <span class="font-bold text-white font-mono">{{ log.cardCode }}</span>
+              </div>
+              <span class="text-[11px] text-slate-400">{{ log.timestamp }}</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- TAB 3: ASSISTANT D'ÉCHANGE INTELLIGENT -->
+      <section v-if="activeTab === 'trade'" class="space-y-6">
+        
+        <!-- Header Banner -->
+        <div class="bg-gradient-to-r from-red-900/40 via-slate-800 to-amber-900/40 border border-slate-700 rounded-2xl p-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i data-lucide="repeat" class="w-6 h-6 text-amber-400"></i> Module D'Échange Facile
+              </h2>
+              <p class="text-xs text-slate-300 mt-1 max-w-2xl">
+                Générez des listes au format texte standard pour vos échanges (WhatsApp, Facebook, Leboncoin, PaniniMania) ou comparez la liste d'un autre collectionneur !
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button @click="tradeSubTab = 'generator'" :class="tradeSubTab === 'generator' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 border border-slate-700'" class="px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+                <i data-lucide="file-text" class="w-4 h-4"></i> Générateur d'Annonces
+              </button>
+              <button @click="tradeSubTab = 'matcher'" :class="tradeSubTab === 'matcher' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 border border-slate-700'" class="px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-4 h-4"></i> Matcher d'Échange
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-Tab 1: List Generator -->
+        <div v-if="tradeSubTab === 'generator'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Duplicates List Text -->
+          <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-red-400 flex items-center gap-2">
+                  <i data-lucide="layers" class="w-4 h-4"></i> Mes Cartes en Double ({{ totalDuplicatesCount }})
+                </h3>
+                <button @click="copyToClipboard(duplicatesTextFormatted, 'Mes doubles ont été copiés !')" class="px-3 py-1 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copier
+                </button>
+              </div>
+
+              <textarea 
+                readonly 
+                :value="duplicatesTextFormatted" 
+                rows="10" 
+                class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono leading-relaxed focus:outline-none">
+              </textarea>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2">Prêt à être collé sur vos groupes d'échanges.</p>
+          </div>
+
+          <!-- Missing List Text -->
+          <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                  <i data-lucide="clock" class="w-4 h-4"></i> Mes Cartes Manquantes ({{ totalMissingCount }})
+                </h3>
+                <button @click="copyToClipboard(missingTextFormatted, 'Mes manquantes ont été copiées !')" class="px-3 py-1 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copier
+                </button>
+              </div>
+
+              <textarea 
+                readonly 
+                :value="missingTextFormatted" 
+                rows="10" 
+                class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono leading-relaxed focus:outline-none">
+              </textarea>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2">Envoyez cette liste aux personnes qui vous proposent un échange.</p>
+          </div>
+
+        </div>
+
+        <!-- Sub-Tab 2: Smart Trade Matcher -->
+        <div v-if="tradeSubTab === 'matcher'" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-6">
+          
+          <div>
+            <h3 class="text-base font-bold text-white mb-1">Comptatibilité d'Échange Automatique</h3>
+            <p class="text-xs text-slate-400">
+              Collez la liste des <strong>DOUBLES</strong> d'un ami ou partenaire d'échange ci-dessous pour calculer immédiatement ce qu'il peut vous donner !
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Coller la liste de l'autre collectionneur :</label>
+              <textarea 
+                v-model="partnerText" 
+                rows="6" 
+                placeholder="Collez ici le texte des doubles de votre partenaire, ex :
+FRA 1, FRA 4, ARG 10, GER 3, BRA 12, POR 7..." 
+                class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              </textarea>
+            </div>
+
+            <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-700 flex flex-col justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">Résultat du Match d'Échange</h4>
+                
+                <div class="space-y-3">
+                  <div>
+                    <div class="text-xs text-slate-400">Cartes qu'il a en double et qu'il vous MANQUE :</div>
+                    <div class="text-sm font-bold text-emerald-400 mt-1">
+                      {{ partnerMatches.length }} carte(s) trouvée(s)
+                    </div>
+                  </div>
+
+                  <div v-if="partnerMatches.length > 0" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pt-1">
+                    <span v-for="card in partnerMatches" :key="card" class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold">
+                      {{ card }}
+                    </span>
+                  </div>
+                  <div v-else-if="partnerText.trim()" class="text-xs text-slate-500 italic">
+                    Aucune correspondance. Il n'a aucune carte en double qui vous manque.
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-slate-800 mt-3">
+                <button 
+                  @click="acceptMatchedCards" 
+                  :disabled="partnerMatches.length === 0"
+                  class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-slate-950 font-extrabold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="check-check" class="w-4 h-4"></i> Valider l'échange (Ajouter ces {{ partnerMatches.length }} cartes à ma collection)
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- TAB 4: GOOGLE SHEETS INTEGRATION -->
+      <section v-if="activeTab === 'sync'" class="max-w-4xl mx-auto space-y-6">
+        
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i data-lucide="file-spreadsheet" class="w-6 h-6 text-emerald-400"></i> Intégration Google Sheets
+              </h2>
+              <p class="text-xs text-slate-300 mt-1">
+                Synchronisez cet outil avec votre fichier Google Sheets personnel : <br>
+                <a href="https://docs.google.com/spreadsheets/d/1yYhxCFAsfeHZ4FlF1FVxvyC5WrtnnBS-9lrfp3krE_A/edit?gid=1994956395#gid=1994956395" target="_blank" class="text-amber-400 hover:underline font-mono inline-flex items-center gap-1 mt-1">
+                  Ouvrir le fichier Google Sheets d'origine <i data-lucide="external-link" class="w-3 h-3"></i>
+                </a>
+              </p>
+            </div>
+            
+            <span class="px-3 py-1 rounded-full text-xs font-bold" :class="sheetsConfig.webAppUrl ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'">
+              {{ sheetsConfig.webAppUrl ? 'Connecté' : 'Mode Local / Non connecté' }}
+            </span>
+          </div>
+
+          <!-- Direct Web App URL Setup -->
+          <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 space-y-3">
+            <label class="block text-xs font-bold text-slate-300">URL du Web App Google Apps Script :</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input 
+                v-model="sheetsConfig.webAppUrl" 
+                type="url" 
+                placeholder="https://script.google.com/macros/s/.../exec" 
+                class="flex-1 bg-slate-800 border border-slate-700 px-3 py-2 text-xs rounded-xl text-white font-mono placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              <button 
+                @click="saveSheetsUrl" 
+                class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shrink-0 flex items-center justify-center gap-1">
+                <i data-lucide="save" class="w-4 h-4"></i> Enregistrer l'URL
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-400">Si vous avez déployé le script ci-dessous dans votre Google Sheet, collez son URL d'exécution Web ici.</p>
+          </div>
+
+          <!-- CSV Export / Import Alternative -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700 flex flex-col justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-white mb-1">Exporter vers Excel / Google Sheets (CSV)</h4>
+                <p class="text-[11px] text-slate-400 mb-3">Téléchargez l'intégralité de votre inventaire actuel pour l'importer manuellement dans Google Sheets.</p>
+              </div>
+              <button @click="exportCSV" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-semibold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i> Télécharger le Fichier CSV
+              </button>
+            </div>
+
+            <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700 flex flex-col justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-white mb-1">Sauvegarder / Charger un Fichier JSON</h4>
+                <p class="text-[11px] text-slate-400 mb-3">Conservez une copie de sécurité locale de toutes vos cartes.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="exportJSON" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-semibold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                  <i data-lucide="upload" class="w-3.5 h-3.5 text-amber-400"></i> Export JSON
+                </button>
+                <label class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-semibold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1 cursor-pointer">
+                  <i data-lucide="file-input" class="w-3.5 h-3.5 text-blue-400"></i> Importer
+                  <input type="file" @change="importJSON" accept=".json" class="hidden">
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Apps Script Code Box instructions -->
+          <div class="border-t border-slate-700 pt-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                <i data-lucide="code" class="w-4 h-4"></i> Code Google Apps Script (pour liaison directe)
+              </h3>
+              <button @click="copyToClipboard(appScriptCode, 'Script Google Apps Script copié !')" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copier le Script
+              </button>
+            </div>
+
+            <ol class="list-decimal list-inside text-xs text-slate-300 space-y-1 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+              <li>Ouvrez votre fichier Google Sheets.</li>
+              <li>Allez dans le menu <strong>Extensions &gt; Apps Script</strong>.</li>
+              <li>Remplacez tout le contenu par le script ci-dessous et enregistrez (CTRL+S).</li>
+              <li>Cliquez sur <strong>Déployer &gt; Nouveau déploiement</strong>, choisissez <em>Application Web</em>.</li>
+              <li>Définissez <strong>"Qui a accès"</strong> sur <em>"N'importe qui" (Anyone)</em>, puis validez.</li>
+            </ol>
+
+            <textarea readonly :value="appScriptCode" rows="8" class="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs text-emerald-400 font-mono leading-relaxed focus:outline-none"></textarea>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-800 py-4 mt-auto">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+        <div>Panini Collection Hub &copy; 2026 - Conçu pour collectionneurs passionnés</div>
+        <div class="flex items-center gap-4">
+          <button @click="resetCollectionData" class="hover:text-red-400 transition">Réinitialiser les données</button>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+      setup() {
+        // Active Navigation State
+        const activeTab = ref('album');
+        const tradeSubTab = ref('generator');
+
+        // Toast Notifications
+        const toast = ref({ show: false, title: '', message: '', type: 'info' });
+        const triggerToast = (title, message, type = 'success') => {
+          toast.value = { show: true, title, message, type };
+          setTimeout(() => { toast.value.show = false; }, 3500);
+        };
+
+        // Standard Panini Countries & Album Structure
+        const countries = ref([
+          { code: 'FWC', name: 'Intro & Logos', flag: '⚽', cardCount: 18 },
+          { code: 'QAT', name: 'Qatar', flag: '🇶🇦', cardCount: 20 },
+          { code: 'ECU', name: 'Équateur', flag: '🇪🇨', cardCount: 20 },
+          { code: 'SEN', name: 'Sénégal', flag: '🇸🇳', cardCount: 20 },
+          { code: 'NED', name: 'Pays-Bas', flag: '🇳🇱', cardCount: 20 },
+          { code: 'ENG', name: 'Angleterre', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', cardCount: 20 },
+          { code: 'IRN', name: 'Iran', flag: '🇮🇷', cardCount: 20 },
+          { code: 'USA', name: 'États-Unis', flag: '🇺🇸', cardCount: 20 },
+          { code: 'WAL', name: 'Pays de Galles', flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', cardCount: 20 },
+          { code: 'ARG', name: 'Argentine', flag: '🇦🇷', cardCount: 20 },
+          { code: 'KSA', name: 'Arabie Saoudite', flag: '🇸🇦', cardCount: 20 },
+          { code: 'MEX', name: 'Mexique', flag: '🇲🇽', cardCount: 20 },
+          { code: 'POL', name: 'Pologne', flag: '🇵🇱', cardCount: 20 },
+          { code: 'FRA', name: 'France', flag: '🇫🇷', cardCount: 20 },
+          { code: 'AUS', name: 'Australie', flag: '🇦🇺', cardCount: 20 },
+          { code: 'DEN', name: 'Danemark', flag: '🇩🇰', cardCount: 20 },
+          { code: 'TUN', name: 'Tunisie', flag: '🇹🇳', cardCount: 20 },
+          { code: 'ESP', name: 'Espagne', flag: '🇪🇸', cardCount: 20 },
+          { code: 'CRC', name: 'Costa Rica', flag: '🇨🇷', cardCount: 20 },
+          { code: 'GER', name: 'Allemagne', flag: '🇩🇪', cardCount: 20 },
+          { code: 'JPN', name: 'Japon', flag: '🇯🇵', cardCount: 20 },
+          { code: 'BEL', name: 'Belgique', flag: '🇧🇪', cardCount: 20 },
+          { code: 'CAN', name: 'Canada', flag: '🇨🇦', cardCount: 20 },
+          { code: 'MAR', name: 'Maroc', flag: '🇲🇦', cardCount: 20 },
+          { code: 'CRO', name: 'Croatie', flag: '🇭🇷', cardCount: 20 },
+          { code: 'BRA', name: 'Brésil', flag: '🇧🇷', cardCount: 20 },
+          { code: 'SRB', name: 'Serbie', flag: '🇷🇸', cardCount: 20 },
+          { code: 'SUI', name: 'Suisse', flag: '🇨🇭', cardCount: 20 },
+          { code: 'CMR', name: 'Cameroun', flag: '🇨🇲', cardCount: 20 },
+          { code: 'POR', name: 'Portugal', flag: '🇵🇹', cardCount: 20 },
+          { code: 'GHA', name: 'Ghana', flag: '🇬🇭', cardCount: 20 },
+          { code: 'URU', name: 'Uruguay', flag: '🇺🇾', cardCount: 20 },
+          { code: 'KOR', name: 'Corée du Sud', flag: '🇰🇷', cardCount: 20 }
+        ]);
+
+        // Collection Inventory state: Key = "FRA_10", Value = Quantity Integer (0 = missing, 1 = owned, 2+ = duplicates)
+        const inventory = ref({});
+
+        // Filters State
+        const selectedCountryCode = ref('ALL');
+        const filterStatus = ref('all'); // 'all', 'missing', 'owned', 'duplicate'
+        const searchQuery = ref('');
+
+        // Quick Single Form State
+        const quickForm = ref({ countryCode: 'FRA', number: null });
+        const bulkText = ref('');
+        const activityLog = ref([]);
+
+        // Partner Trade Matcher State
+        const partnerText = ref('');
+
+        // Google Sheets Integration Config
+        const sheetsConfig = ref({ webAppUrl: '' });
+
+        // Load persisted state from LocalStorage
+        const loadSavedState = () => {
+          const savedInv = localStorage.getItem('panini_inventory');
+          if (savedInv) {
+            try { inventory.value = JSON.parse(savedInv); } catch(e){}
+          }
+          const savedUrl = localStorage.getItem('panini_sheets_url');
+          if (savedUrl) {
+            sheetsConfig.value.webAppUrl = savedUrl;
+          }
+        };
+
+        // Save inventory to LocalStorage whenever modified
+        watch(inventory, (newVal) => {
+          localStorage.setItem('panini_inventory', JSON.stringify(newVal));
+        }, { deep: true });
+
+        // Helpers for quantity
+        const getQuantity = (countryCode, num) => {
+          return inventory.value[`${countryCode}_${num}`] || 0;
+        };
+
+        const setQuantity = (countryCode, num, qty) => {
+          const finalQty = Math.max(0, qty);
+          const key = `${countryCode}_${num}`;
+          inventory.value[key] = finalQty;
+        };
+
+        // Increment & Decrement Logic
+        const quickIncrement = (countryCode, num) => {
+          const current = getQuantity(countryCode, num);
+          setQuantity(countryCode, num, current + 1);
+          logActivity('add', `${countryCode} ${num}`);
+          triggerToast('Carte Ajoutée', `${countryCode} ${num} (Quantité : ${current + 1})`, 'success');
+          checkAlbumCompletion();
+        };
+
+        const quickDecrement = (countryCode, num) => {
+          const current = getQuantity(countryCode, num);
+          if (current > 0) {
+            setQuantity(countryCode, num, current - 1);
+            logActivity('remove', `${countryCode} ${num}`);
+            triggerToast('Carte Retirée', `${countryCode} ${num} (Quantité : ${current - 1})`, 'info');
+          }
+        };
+
+        // Activity Logging
+        const logActivity = (action, cardCode) => {
+          const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          activityLog.value.unshift({ action, cardCode, timestamp: time });
+          if (activityLog.value.length > 25) activityLog.value.pop();
+        };
+
+        // Single Card Form Execution
+        const applySingleCard = (action) => {
+          if (!quickForm.value.countryCode || !quickForm.value.number) return;
+          if (action === 'add') {
+            quickIncrement(quickForm.value.countryCode, quickForm.value.number);
+          } else {
+            quickDecrement(quickForm.value.countryCode, quickForm.value.number);
+          }
+        };
+
+        // Bulk Text Processor (Parses texts like "FRA 1, FRA 4, ARG 10" or "FRA 1 2 3")
+        const processBulkText = (action) => {
+          const raw = bulkText.value;
+          if (!raw.trim()) return;
+
+          // Regular expression to match [CountryCode] [Number] patterns
+          const regex = /([A-Za-z]{2,4})\s*(\d+)/g;
+          let match;
+          let count = 0;
+
+          while ((match = regex.exec(raw)) !== null) {
+            const code = match[1].toUpperCase();
+            const num = parseInt(match[2], 10);
+
+            // Check if country exists
+            const exists = countries.value.some(c => c.code === code);
+            if (exists) {
+              if (action === 'add') {
+                const cur = getQuantity(code, num);
+                setQuantity(code, num, cur + 1);
+              } else {
+                const cur = getQuantity(code, num);
+                if (cur > 0) setQuantity(code, num, cur - 1);
+              }
+              count++;
+            }
+          }
+
+          if (count > 0) {
+            triggerToast('Traitement terminé', `${count} carte(s) ${action === 'add' ? 'ajoutée(s)' : 'retirée(s)'} avec succès !`, 'success');
+            bulkText.value = '';
+          } else {
+            triggerToast('Erreur de format', 'Aucune carte valide identifiée dans le texte. Exemple attendu : FRA 1, FRA 4', 'error');
+          }
+        };
+
+        // Calculations & Statistics
+        const totalCardsInAlbum = computed(() => {
+          return countries.value.reduce((acc, c) => acc + c.cardCount, 0);
+        });
+
+        const totalUniqueOwned = computed(() => {
+          let count = 0;
+          countries.value.forEach(c => {
+            for (let i = 1; i <= c.cardCount; i++) {
+              if (getQuantity(c.code, i) > 0) count++;
+            }
+          });
+          return count;
+        });
+
+        const totalMissingCount = computed(() => {
+          return totalCardsInAlbum.value - totalUniqueOwned.value;
+        });
+
+        const totalDuplicatesCount = computed(() => {
+          let dupes = 0;
+          countries.value.forEach(c => {
+            for (let i = 1; i <= c.cardCount; i++) {
+              const q = getQuantity(c.code, i);
+              if (q > 1) dupes += (q - 1);
+            }
+          });
+          return dupes;
+        });
+
+        const overallProgress = computed(() => {
+          if (totalCardsInAlbum.value === 0) return 0;
+          return Math.round((totalUniqueOwned.value / totalCardsInAlbum.value) * 100);
+        });
+
+        const getCountryOwnedCount = (code) => {
+          const country = countries.value.find(c => c.code === code);
+          if (!country) return 0;
+          let count = 0;
+          for (let i = 1; i <= country.cardCount; i++) {
+            if (getQuantity(code, i) > 0) count++;
+          }
+          return count;
+        };
+
+        const getCountryDuplicatesCount = (code) => {
+          const country = countries.value.find(c => c.code === code);
+          if (!country) return 0;
+          let dupes = 0;
+          for (let i = 1; i <= country.cardCount; i++) {
+            const q = getQuantity(code, i);
+            if (q > 1) dupes += (q - 1);
+          }
+          return dupes;
+        };
+
+        const getSelectedCountryMaxCard = () => {
+          const c = countries.value.find(x => x.code === quickForm.value.countryCode);
+          return c ? c.cardCount : 20;
+        };
+
+        // Filtering Logic for Album Tab
+        const filteredCountries = computed(() => {
+          return countries.value.filter(country => {
+            if (selectedCountryCode.value !== 'ALL' && country.code !== selectedCountryCode.value) {
+              return false;
+            }
+            // Check if search query matches country or cards
+            if (searchQuery.value.trim()) {
+              const q = searchQuery.value.toUpperCase();
+              const nameMatch = country.name.toUpperCase().includes(q) || country.code.includes(q);
+              
+              // Check card match
+              let cardMatch = false;
+              for (let i = 1; i <= country.cardCount; i++) {
+                if (`${country.code} ${i}`.includes(q) || `${country.code}${i}`.includes(q)) {
+                  cardMatch = true; break;
+                }
+              }
+              if (!nameMatch && !cardMatch) return false;
+            }
+            return true;
+          });
+        });
+
+        const getCardsForCountry = (country) => {
+          const cards = [];
+          for (let i = 1; i <= country.cardCount; i++) {
+            const qty = getQuantity(country.code, i);
+            
+            // Filter status condition
+            if (filterStatus.value === 'missing' && qty !== 0) continue;
+            if (filterStatus.value === 'owned' && qty === 0) continue;
+            if (filterStatus.value === 'duplicate' && qty < 2) continue;
+
+            // Search query condition per card
+            if (searchQuery.value.trim()) {
+              const q = searchQuery.value.toUpperCase();
+              const fullCode = `${country.code} ${i}`;
+              const compactCode = `${country.code}${i}`;
+              if (!fullCode.includes(q) && !compactCode.includes(q) && !country.name.toUpperCase().includes(q)) {
+                continue;
+              }
+            }
+
+            cards.push(i);
+          }
+          return cards;
+        };
+
+        const getCardGridClass = (code, num) => {
+          const qty = getQuantity(code, num);
+          if (qty === 0) {
+            return 'bg-slate-900/60 border-slate-700/60 text-slate-500 hover:border-amber-500/50';
+          } else if (qty === 1) {
+            return 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 shadow-sm hover:border-emerald-400';
+          } else {
+            return 'bg-red-950/50 border-red-500/70 text-red-200 badge-shiny hover:border-red-400';
+          }
+        };
+
+        const resetFilters = () => {
+          selectedCountryCode.value = 'ALL';
+          filterStatus.value = 'all';
+          searchQuery.value = '';
+        };
+
+        // Trade Text Generators
+        const duplicatesTextFormatted = computed(() => {
+          let result = [];
+          countries.value.forEach(c => {
+            let countryDupes = [];
+            for (let i = 1; i <= c.cardCount; i++) {
+              const q = getQuantity(c.code, i);
+              if (q > 1) {
+                const extra = q - 1;
+                countryDupes.push(extra > 1 ? `${c.code} ${i} (x${extra})` : `${c.code} ${i}`);
+              }
+            }
+            if (countryDupes.length > 0) {
+              result.push(`${c.flag} ${c.name}: ` + countryDupes.join(', '));
+            }
+          });
+          return result.length > 0 ? result.join('\n') : 'Aucun double disponible actuellement.';
+        });
+
+        const missingTextFormatted = computed(() => {
+          let result = [];
+          countries.value.forEach(c => {
+            let countryMissing = [];
+            for (let i = 1; i <= c.cardCount; i++) {
+              if (getQuantity(c.code, i) === 0) {
+                countryMissing.push(`${c.code} ${i}`);
+              }
+            }
+            if (countryMissing.length > 0) {
+              result.push(`${c.flag} ${c.name}: ` + countryMissing.join(', '));
+            }
+          });
+          return result.length > 0 ? result.join('\n') : 'Félicitations ! Votre album est à 100% complet ! 🎉';
+        });
+
+        // Partner Trade Matching Logic
+        const partnerMatches = computed(() => {
+          if (!partnerText.value.trim()) return [];
+          const regex = /([A-Za-z]{2,4})\s*(\d+)/g;
+          let match;
+          const found = new Set();
+
+          while ((match = regex.exec(partnerText.value)) !== null) {
+            const code = match[1].toUpperCase();
+            const num = parseInt(match[2], 10);
+
+            // Is this card missing in my collection?
+            if (getQuantity(code, num) === 0) {
+              const exists = countries.value.some(c => c.code === code);
+              if (exists) {
+                found.add(`${code} ${num}`);
+              }
+            }
+          }
+          return Array.from(found);
+        });
+
+        const acceptMatchedCards = () => {
+          if (partnerMatches.value.length === 0) return;
+          partnerMatches.value.forEach(cardCodeStr => {
+            const parts = cardCodeStr.split(' ');
+            if (parts.length === 2) {
+              const code = parts[0];
+              const num = parseInt(parts[1], 10);
+              quickIncrement(code, num);
+            }
+          });
+          triggerToast('Échange Validé !', `${partnerMatches.value.length} nouvelle(s) carte(s) ajoutée(s) à votre album !`, 'success');
+          partnerText.value = '';
+        };
+
+        // Copy Utility
+        const copyToClipboard = (text, message) => {
+          if (!text) return;
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          triggerToast('Copié dans le presse-papier !', message, 'success');
+        };
+
+        // Google Sheets App Script backend code template
+        const appScriptCode = ref(`// Collez ce code dans Extensions > Apps Script de votre Google Sheet
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var payload = JSON.parse(e.postData.contents);
+    
+    // Format attendu: [{ country: 'FRA', number: 10, quantity: 2 }, ...]
+    sheet.clear();
+    sheet.appendRow(["Pays", "Numero", "Quantite", "Statut"]);
+    
+    payload.forEach(function(item) {
+      var status = item.quantity === 0 ? "MANQUANTE" : (item.quantity === 1 ? "POSSEDEE" : "DOUBLE");
+      sheet.appendRow([item.country, item.number, item.quantity, status]);
+    });
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch(error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`);
+
+        const saveSheetsUrl = () => {
+          localStorage.setItem('panini_sheets_url', sheetsConfig.value.webAppUrl);
+          triggerToast('URL Enregistrée', 'L\'URL Google Apps Script a été mémorisée.', 'success');
+        };
+
+        // Export Inventory as CSV
+        const exportCSV = () => {
+          let csvContent = "data:text/csv;charset=utf-8,Pays,Numero,Quantite,Statut\n";
+          countries.value.forEach(c => {
+            for (let i = 1; i <= c.cardCount; i++) {
+              const q = getQuantity(c.code, i);
+              const status = q === 0 ? "MANQUANTE" : (q === 1 ? "POSSEDEE" : "DOUBLE");
+              csvContent += `${c.code},${i},${q},${status}\n`;
+            }
+          });
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement("a");
+          link.setAttribute("href", encodedUri);
+          link.setAttribute("download", `Collection_Panini_${new Date().toISOString().slice(0,10)}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          triggerToast('Export CSV', 'Fichier CSV téléchargé !', 'success');
+        };
+
+        // JSON Backup / Restore
+        const exportJSON = () => {
+          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(inventory.value, null, 2));
+          const dlAnchor = document.createElement('a');
+          dlAnchor.setAttribute("href", dataStr);
+          dlAnchor.setAttribute("download", `Panini_Backup_${new Date().toISOString().slice(0,10)}.json`);
+          document.body.appendChild(dlAnchor);
+          dlAnchor.click();
+          dlAnchor.remove();
+        };
+
+        const importJSON = (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const parsed = JSON.parse(e.target.result);
+              inventory.value = parsed;
+              triggerToast('Importation Réussie', 'Votre collection a été restaurée à partir du fichier JSON.', 'success');
+            } catch(err) {
+              triggerToast('Erreur Fichier', 'Le fichier JSON est invalide.', 'error');
+            }
+          };
+          reader.readAsText(file);
+        };
+
+        // Reset Data
+        const resetCollectionData = () => {
+          if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les cartes de votre collection à 0 ?')) {
+            inventory.value = {};
+            localStorage.removeItem('panini_inventory');
+            triggerToast('Réinitialisation', 'Votre inventaire a été remis à zéro.', 'info');
+          }
+        };
+
+        // Confetti celebration if 100% complete
+        const checkAlbumCompletion = () => {
+          if (overallProgress.value === 100 && typeof confetti === 'function') {
+            confetti({
+              particleCount: 150,
+              spread: 80,
+              origin: { y: 0.6 }
+            });
+            triggerToast('FÉLICITATIONS ! 🎉', 'Votre album Panini est 100% COMPLET !', 'success');
+          }
+        };
+
+        onMounted(() => {
+          loadSavedState();
+          lucide.createIcons();
+        });
+
+        watch(activeTab, () => {
+          setTimeout(() => lucide.createIcons(), 50);
+        });
+
+        watch(tradeSubTab, () => {
+          setTimeout(() => lucide.createIcons(), 50);
+        });
+
+        return {
+          activeTab,
+          tradeSubTab,
+          toast,
+          countries,
+          inventory,
+          selectedCountryCode,
+          filterStatus,
+          searchQuery,
+          quickForm,
+          bulkText,
+          activityLog,
+          partnerText,
+          sheetsConfig,
+          appScriptCode,
+          getQuantity,
+          quickIncrement,
+          quickDecrement,
+          applySingleCard,
+          processBulkText,
+          totalCardsInAlbum,
+          totalUniqueOwned,
+          totalMissingCount,
+          totalDuplicatesCount,
+          overallProgress,
+          getCountryOwnedCount,
+          getCountryDuplicatesCount,
+          getSelectedCountryMaxCard,
+          filteredCountries,
+          getCardsForCountry,
+          getCardGridClass,
+          resetFilters,
+          duplicatesTextFormatted,
+          missingTextFormatted,
+          partnerMatches,
+          acceptMatchedCards,
+          copyToClipboard,
+          saveSheetsUrl,
+          exportCSV,
+          exportJSON,
+          importJSON,
+          resetCollectionData
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
