@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panini Collection Hub - Suivi & Échanges</title>
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -171,7 +170,6 @@
         </div>
       </transition>
 
-      <!-- Stats Dashboard Header -->
       <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0">
@@ -214,7 +212,6 @@
         </div>
       </section>
 
-      <!-- TAB 1: ALBUM VIEW -->
       <section v-if="activeTab === 'album'" class="space-y-6">
         
         <!-- Controls & Filters Bar -->
@@ -332,7 +329,6 @@
 
       </section>
 
-      <!-- TAB 2: QUICK ACTION MODE -->
       <section v-if="activeTab === 'quick-action'" class="max-w-4xl mx-auto space-y-6">
         
         <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
@@ -441,7 +437,6 @@
 
       </section>
 
-      <!-- TAB 3: SMART TRADE ASSISTANT -->
       <section v-if="activeTab === 'trade'" class="space-y-6">
         
         <div class="bg-gradient-to-r from-red-900/40 via-slate-800 to-amber-900/40 border border-slate-700 rounded-2xl p-6">
@@ -564,7 +559,6 @@
 
       </section>
 
-      <!-- TAB 4: GOOGLE SHEETS INTEGRATION -->
       <section v-if="activeTab === 'sync'" class="max-w-4xl mx-auto space-y-6">
         
         <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-6">
@@ -715,8 +709,43 @@
           { code: 'KOR', name: 'Corée du Sud', flag: '🇰🇷', cardCount: 20 }
         ]);
 
-        const inventory = ref({});
+        const countryMap = {
+          'FWC': 'FWC', 'INTRO': 'FWC', 'LOGOS': 'FWC',
+          'QAT': 'QAT', 'QATAR': 'QAT',
+          'ECU': 'ECU', 'EQUATEUR': 'ECU', 'ECUADOR': 'ECU',
+          'SEN': 'SEN', 'SENEGAL': 'SEN',
+          'NED': 'NED', 'PAYS-BAS': 'NED', 'PAYS BAS': 'NED', 'NETHERLANDS': 'NED', 'HOLLAND': 'NED',
+          'ENG': 'ENG', 'ANGLETERRE': 'ENG', 'ENGLAND': 'ENG',
+          'IRN': 'IRN', 'IRAN': 'IRN',
+          'USA': 'USA', 'ETATS-UNIS': 'USA', 'ETATS UNIS': 'USA', 'UNITED STATES': 'USA',
+          'WAL': 'WAL', 'PAYS DE GALLES': 'WAL', 'WALES': 'WAL',
+          'ARG': 'ARG', 'ARGENTINE': 'ARG', 'ARGENTINA': 'ARG',
+          'KSA': 'KSA', 'ARABIE SAOUDITE': 'KSA', 'SAUDI ARABIA': 'KSA',
+          'MEX': 'MEX', 'MEXIQUE': 'MEX', 'MEXICO': 'MEX',
+          'POL': 'POL', 'POLOGNE': 'POL', 'POLAND': 'POL',
+          'FRA': 'FRA', 'FRANCE': 'FRA',
+          'AUS': 'AUS', 'AUSTRALIE': 'AUS', 'AUSTRALIA': 'AUS',
+          'DEN': 'DEN', 'DANEMARK': 'DEN', 'DENMARK': 'DEN',
+          'TUN': 'TUN', 'TUNISIE': 'TUN', 'TUNISIA': 'TUN',
+          'ESP': 'ESP', 'ESPAGNE': 'ESP', 'SPAIN': 'ESP',
+          'CRC': 'CRC', 'COSTA RICA': 'CRC',
+          'GER': 'GER', 'ALLEMAGNE': 'GER', 'GERMANY': 'GER',
+          'JPN': 'JPN', 'JAPON': 'JPN', 'JAPAN': 'JPN',
+          'BEL': 'BEL', 'BELGIQUE': 'BEL', 'BELGIUM': 'BEL',
+          'CAN': 'CAN', 'CANADA': 'CAN',
+          'MAR': 'MAR', 'MAROC': 'MAR', 'MOROCCO': 'MAR',
+          'CRO': 'CRO', 'CROATIE': 'CRO', 'CROATIA': 'CRO',
+          'BRA': 'BRA', 'BRESIL': 'BRA', 'BRAZIL': 'BRA',
+          'SRB': 'SRB', 'SERBIE': 'SRB', 'SERBIA': 'SRB',
+          'SUI': 'SUI', 'SUISSE': 'SUI', 'SWITZERLAND': 'SUI',
+          'CMR': 'CMR', 'CAMEROUN': 'CMR', 'CAMEROON': 'CMR',
+          'POR': 'POR', 'PORTUGAL': 'POR',
+          'GHA': 'GHA', 'GHANA': 'GHA',
+          'URU': 'URU', 'URUGUAY': 'URU',
+          'KOR': 'KOR', 'COREE DU SUD': 'KOR', 'SOUTH KOREA': 'KOR', 'KOREA': 'KOR'
+        };
 
+        const inventory = ref({});
         const selectedCountryCode = ref('ALL');
         const filterStatus = ref('all');
         const searchQuery = ref('');
@@ -750,6 +779,116 @@
           const finalQty = Math.max(0, qty);
           const key = `${countryCode}_${num}`;
           inventory.value[key] = finalQty;
+        };
+
+        const totalCardsInAlbum = computed(() => {
+          return countries.value.reduce((sum, c) => sum + c.cardCount, 0);
+        });
+
+        const totalUniqueOwned = computed(() => {
+          let count = 0;
+          countries.value.forEach(c => {
+            for (let i = 1; i <= c.cardCount; i++) {
+              if (getQuantity(c.code, i) > 0) count++;
+            }
+          });
+          return count;
+        });
+
+        const totalMissingCount = computed(() => {
+          return totalCardsInAlbum.value - totalUniqueOwned.value;
+        });
+
+        const totalDuplicatesCount = computed(() => {
+          let dupes = 0;
+          countries.value.forEach(c => {
+            for (let i = 1; i <= c.cardCount; i++) {
+              const qty = getQuantity(c.code, i);
+              if (qty > 1) dupes += (qty - 1);
+            }
+          });
+          return dupes;
+        });
+
+        const overallProgress = computed(() => {
+          if (!totalCardsInAlbum.value) return 0;
+          return Math.round((totalUniqueOwned.value / totalCardsInAlbum.value) * 100);
+        });
+
+        const getCountryOwnedCount = (countryCode) => {
+          const country = countries.value.find(c => c.code === countryCode);
+          if (!country) return 0;
+          let count = 0;
+          for (let i = 1; i <= country.cardCount; i++) {
+            if (getQuantity(countryCode, i) > 0) count++;
+          }
+          return count;
+        };
+
+        const getCountryDuplicatesCount = (countryCode) => {
+          const country = countries.value.find(c => c.code === countryCode);
+          if (!country) return 0;
+          let dupes = 0;
+          for (let i = 1; i <= country.cardCount; i++) {
+            const qty = getQuantity(countryCode, i);
+            if (qty > 1) dupes += (qty - 1);
+          }
+          return dupes;
+        };
+
+        const getSelectedCountryMaxCard = () => {
+          const c = countries.value.find(x => x.code === quickForm.value.countryCode);
+          return c ? c.cardCount : 20;
+        };
+
+        const filteredCountries = computed(() => {
+          let list = countries.value;
+          if (selectedCountryCode.value !== 'ALL') {
+            list = list.filter(c => c.code === selectedCountryCode.value);
+          }
+          if (searchQuery.value.trim()) {
+            const q = searchQuery.value.trim().toUpperCase();
+            list = list.filter(c => {
+              if (c.code.includes(q) || c.name.toUpperCase().includes(q)) return true;
+              for (let i = 1; i <= c.cardCount; i++) {
+                if (`${c.code} ${i}`.includes(q) || `${c.code}${i}`.includes(q)) return true;
+              }
+              return false;
+            });
+          }
+          return list;
+        });
+
+        const getCardsForCountry = (country) => {
+          const cards = [];
+          for (let i = 1; i <= country.cardCount; i++) {
+            const qty = getQuantity(country.code, i);
+            const cardCode = `${country.code} ${i}`;
+            const searchMatch = !searchQuery.value.trim() || 
+              cardCode.toUpperCase().includes(searchQuery.value.trim().toUpperCase()) ||
+              country.name.toUpperCase().includes(searchQuery.value.trim().toUpperCase()) ||
+              country.code.toUpperCase().includes(searchQuery.value.trim().toUpperCase());
+
+            if (!searchMatch) continue;
+
+            if (filterStatus.value === 'missing' && qty > 0) continue;
+            if (filterStatus.value === 'owned' && qty === 0) continue;
+            if (filterStatus.value === 'duplicate' && qty <= 1) continue;
+
+            cards.push(i);
+          }
+          return cards;
+        };
+
+        const getCardGridClass = (countryCode, cardNum) => {
+          const qty = getQuantity(countryCode, cardNum);
+          if (qty === 0) {
+            return 'bg-slate-900/60 border-slate-800 text-slate-500 hover:border-slate-600';
+          } else if (qty === 1) {
+            return 'bg-emerald-950/40 border-emerald-600/50 text-emerald-300 hover:border-emerald-400';
+          } else {
+            return 'bg-red-950/40 border-red-500/60 text-red-300 hover:border-red-400 badge-shiny';
+          }
         };
 
         const quickIncrement = (countryCode, num) => {
@@ -809,6 +948,258 @@
           }
         };
 
+        const duplicatesTextFormatted = computed(() => {
+          const list = [];
+          countries.value.forEach(c => {
+            for (let i = 1; i <= c.cardCount; i++) {
+              const qty = getQuantity(c.code, i);
+              if (qty > 1) {
+                const count = qty - 1;
+                list.push(`${c.code} ${i}` + (count > 1 ? ` (x${count})` : ''));
+              }
+            }
+          });
+          return list.join(', ');
+        });
+
+        const missingTextFormatted = computed(() => {
+          const list = [];
+          countries.value.forEach(c => {
+            for (let i = 1; i <= c.cardCount; i++) {
+              if (getQuantity(c.code, i) === 0) {
+                list.push(`${c.code} ${i}`);
+              }
+            }
+          });
+          return list.join(', ');
+        });
+
+        const partnerMatches = computed(() => {
+          if (!partnerText.value.trim()) return [];
+          const regex = /([A-Za-z]{2,4})\s*(\d+)/g;
+          let match;
+          const matches = [];
+          while ((match = regex.exec(partnerText.value)) !== null) {
+            const code = match[1].toUpperCase();
+            const num = parseInt(match[2], 10);
+            const countryExists = countries.value.some(c => c.code === code);
+            if (countryExists) {
+              if (getQuantity(code, num) === 0 && !matches.includes(`${code} ${num}`)) {
+                matches.push(`${code} ${num}`);
+              }
+            }
+          }
+          return matches;
+        });
+
+        const acceptMatchedCards = () => {
+          if (partnerMatches.value.length === 0) return;
+          let count = 0;
+          partnerMatches.value.forEach(item => {
+            const parts = item.split(' ');
+            if (parts.length === 2) {
+              const code = parts[0];
+              const num = parseInt(parts[1], 10);
+              quickIncrement(code, num);
+              count++;
+            }
+          });
+          partnerText.value = '';
+          triggerToast('Échange Validé !', `${count} carte(s) ajoutée(s) à votre album.`, 'success');
+        };
+
+        const copyToClipboard = (text, message = 'Copié dans le presse-papier !') => {
+          if (!text) return;
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            document.execCommand('copy');
+            triggerToast('Copié !', message, 'success');
+          } catch (err) {
+            triggerToast('Erreur', 'Impossible de copier le texte', 'error');
+          } finally {
+            document.body.removeChild(textarea);
+          }
+        };
+
+        const parseSheetData = (data) => {
+          const newInv = {};
+
+          const normalizeCountry = (str) => {
+            if (!str) return null;
+            const clean = String(str).trim().toUpperCase()
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return countryMap[clean] || null;
+          };
+
+          const parseQty = (val) => {
+            if (val === true || val === 'TRUE' || val === 'true') return 1;
+            if (val === false || val === 'FALSE' || val === 'false') return 0;
+            if (typeof val === 'number') return Math.max(0, Math.floor(val));
+            
+            const str = String(val || '').trim().toUpperCase();
+            if (!str || str === '0' || str === 'MANQUANTE' || str === 'NON' || str === 'NO' || str === 'MANQUE' || str === '-') return 0;
+            if (str === 'X' || str === 'V' || str === 'OUI' || str === 'YES' || str === 'OK' || str === 'POSSEDEE' || str === 'POSSÉDÉE' || str === '1') return 1;
+            if (str.includes('DOUBLE')) return 2;
+            
+            const numMatch = str.match(/\d+/);
+            if (numMatch) return Math.max(0, parseInt(numMatch[0], 10));
+            
+            return 0;
+          };
+
+          if (!Array.isArray(data)) {
+            if (data && typeof data === 'object') {
+              for (const k in data) {
+                if (k.includes('_')) {
+                  newInv[k] = parseQty(data[k]);
+                }
+              }
+            }
+            return newInv;
+          }
+
+          // PASS 1: Cell-by-Cell Regex Scan
+          for (let r = 0; r < data.length; r++) {
+            const row = data[r];
+            if (!Array.isArray(row)) continue;
+            for (let c = 0; c < row.length; c++) {
+              const cellStr = String(row[c] || '').trim().toUpperCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              if (!cellStr) continue;
+
+              const match = cellStr.match(/^([A-Z]{2,4})[\s\-_]*(\d{1,2})(?:\s*[\(x:\-]\s*(\d+)\)?)?$/);
+              if (match) {
+                const code = normalizeCountry(match[1]);
+                const num = parseInt(match[2], 10);
+                if (code && num >= 1 && num <= 30) {
+                  let qty = 1;
+                  if (match[3] !== undefined) {
+                    qty = parseInt(match[3], 10);
+                  } else if (c + 1 < row.length) {
+                    const nextVal = row[c + 1];
+                    if (nextVal !== "" && nextVal !== null && nextVal !== undefined) {
+                      qty = parseQty(nextVal);
+                    }
+                  }
+                  newInv[`${code}_${num}`] = qty;
+                }
+              }
+            }
+          }
+
+          if (Object.keys(newInv).length >= 5) return newInv;
+
+          // PASS 2: Row Scan
+          for (let r = 0; r < data.length; r++) {
+            const row = data[r];
+            if (!Array.isArray(row)) continue;
+            for (let c = 0; c < row.length - 1; c++) {
+              const code = normalizeCountry(row[c]);
+              const num = parseInt(String(row[c + 1] || '').trim(), 10);
+              if (code && !isNaN(num) && num >= 1 && num <= 30) {
+                let rawQty = 1;
+                if (c + 2 < row.length && row[c + 2] !== "" && row[c + 2] !== undefined) {
+                  rawQty = row[c + 2];
+                } else if (c + 3 < row.length && row[c + 3] !== "" && row[c + 3] !== undefined) {
+                  rawQty = row[c + 3];
+                }
+                newInv[`${code}_${num}`] = parseQty(rawQty);
+              }
+            }
+          }
+
+          if (Object.keys(newInv).length >= 5) return newInv;
+
+          // PASS 3: Section Headers Scan
+          let currentCode = null;
+          for (let r = 0; r < data.length; r++) {
+            const row = data[r];
+            if (!Array.isArray(row) || row.length === 0) continue;
+            
+            const possibleCountry = normalizeCountry(row[0]);
+            const firstCellNum = parseInt(String(row[0] || '').trim(), 10);
+
+            if (possibleCountry && isNaN(firstCellNum)) {
+              currentCode = possibleCountry;
+              continue;
+            }
+
+            if (currentCode) {
+              const num = parseInt(String(row[0] || '').trim(), 10) || parseInt(String(row[1] || '').trim(), 10);
+              if (!isNaN(num) && num >= 1 && num <= 30) {
+                const rawQty = row[1] !== undefined && isNaN(parseInt(row[1], 10)) ? row[1] : (row[2] !== undefined ? row[2] : 1);
+                newInv[`${currentCode}_${num}`] = parseQty(rawQty);
+              }
+            }
+          }
+
+          if (Object.keys(newInv).length >= 5) return newInv;
+
+          // PASS 4: Matrix / Grid Scan
+          if (data.length > 1 && Array.isArray(data[0])) {
+            const headerCountries = data[0].map(cell => normalizeCountry(cell));
+            const validCountryCols = [];
+            headerCountries.forEach((code, colIdx) => {
+              if (code) validCountryCols.push({ code, colIdx });
+            });
+
+            if (validCountryCols.length >= 3) {
+              for (let r = 1; r < data.length; r++) {
+                const row = data[r];
+                if (!Array.isArray(row)) continue;
+                const rowNum = parseInt(String(row[0] || '').trim(), 10);
+                validCountryCols.forEach(({ code, colIdx }) => {
+                  if (colIdx < row.length) {
+                    const cardNum = !isNaN(rowNum) && rowNum >= 1 && rowNum <= 30 ? rowNum : r;
+                    const qty = parseQty(row[colIdx]);
+                    newInv[`${code}_${cardNum}`] = qty;
+                  }
+                });
+              }
+            }
+          }
+
+          if (Object.keys(newInv).length >= 5) return newInv;
+
+          // PASS 5: Global Sequential Index Scan
+          const globalIndexMap = [];
+          countries.value.forEach(c => {
+            for (let i = 1; i <= c.cardCount; i++) {
+              globalIndexMap.push({ code: c.code, num: i });
+            }
+          });
+
+          for (let r = 0; r < data.length; r++) {
+            const row = data[r];
+            if (!Array.isArray(row)) continue;
+            const col0Num = parseInt(String(row[0] || '').trim(), 10);
+            const col1Num = parseInt(String(row[1] || '').trim(), 10);
+            
+            let index = null;
+            let qtyVal = 0;
+
+            if (!isNaN(col0Num) && col0Num >= 1 && col0Num <= globalIndexMap.length) {
+              index = col0Num - 1;
+              qtyVal = row[1] !== undefined ? row[1] : row[2];
+            } else if (!isNaN(col1Num) && col1Num >= 1 && col1Num <= globalIndexMap.length) {
+              index = col1Num - 1;
+              qtyVal = row[2] !== undefined ? row[2] : row[3];
+            }
+
+            if (index !== null && globalIndexMap[index]) {
+              const card = globalIndexMap[index];
+              newInv[`${card.code}_${card.num}`] = parseQty(qtyVal);
+            }
+          }
+
+          return newInv;
+        };
+
         const fetchFromSheets = async () => {
           let url = (sheetsConfig.value.webAppUrl || '').trim();
           if (!url) {
@@ -826,77 +1217,24 @@
             const res = await fetch(url);
             if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
             const data = await res.json();
-            
-            const newInv = {};
 
-            const parseCardId = (col0, col1) => {
-              const s0 = String(col0 || '').trim().toUpperCase();
-              const s1 = String(col1 || '').trim().toUpperCase();
-
-              if (/^[A-Z]{2,4}$/.test(s0) && !isNaN(parseInt(s1, 10))) {
-                return { code: s0, num: parseInt(s1, 10) };
-              }
-
-              const match0 = s0.match(/^([A-Z]{2,4})[\s\-_]*(\d+)$/);
-              if (match0) {
-                return { code: match0[1], num: parseInt(match0[2], 10) };
-              }
-
-              const foundCountry = countries.value.find(c => c.name.toUpperCase() === s0 || c.code === s0);
-              if (foundCountry && !isNaN(parseInt(s1, 10))) {
-                return { code: foundCountry.code, num: parseInt(s1, 10) };
-              }
-
-              return null;
-            };
-
-            const parseQty = (val) => {
-              if (val === true || val === 'TRUE' || val === 'true') return 1;
-              if (val === false || val === 'FALSE' || val === 'false') return 0;
-              if (typeof val === 'number') return Math.max(0, Math.floor(val));
-              
-              const str = String(val || '').trim().toUpperCase();
-              if (!str || str === '0' || str === 'MANQUANTE' || str === 'NON' || str === 'NO') return 0;
-              if (str === 'X' || str === 'V' || str === 'OUI' || str === 'YES' || str === 'OK' || str === 'POSSEDEE' || str === '1') return 1;
-              if (str === 'DOUBLE') return 2;
-              
-              const parsed = parseInt(str, 10);
-              return isNaN(parsed) ? 0 : Math.max(0, parsed);
-            };
-
-            if (Array.isArray(data)) {
-              for (let i = 0; i < data.length; i++) {
-                const row = data[i];
-                if (!Array.isArray(row) || row.length === 0) continue;
-
-                const cardId = parseCardId(row[0], row[1]);
-                if (cardId) {
-                  let rawQty = 0;
-                  if (/^[A-Z]{2,4}$/.test(String(row[0]).trim().toUpperCase()) && !isNaN(parseInt(row[1], 10))) {
-                    rawQty = row[2] !== undefined ? row[2] : row[3];
-                  } else {
-                    rawQty = row[1] !== undefined ? row[1] : row[2];
-                  }
-
-                  const qty = parseQty(rawQty);
-                  const key = `${cardId.code}_${cardId.num}`;
-                  newInv[key] = qty;
-                }
-              }
-              inventory.value = newInv;
-            } else if (data && typeof data === 'object') {
-              const cleanObj = {};
-              for (const k in data) {
-                cleanObj[k] = parseQty(data[k]);
-              }
-              inventory.value = cleanObj;
+            if (data && data.status === 'error') {
+              triggerToast('Erreur Apps Script', data.message || 'Une erreur est survenue dans le script.', 'error');
+              return;
             }
 
-            const loadedCount = Object.keys(inventory.value).length;
+            const parsedInv = parseSheetData(data);
+            const loadedCount = Object.keys(parsedInv).length;
+
             if (loadedCount > 0) {
+              inventory.value = parsedInv;
               triggerToast('Synchronisation Réussie', `${loadedCount} carte(s) chargée(s) depuis Google Sheets !`, 'success');
             } else {
-              triggerToast('Aucune donnée trouvée', 'La feuille a été lue mais aucune carte n\'a pu être identifiée.', 'warning');
+              let sample = '';
+              if (Array.isArray(data) && data.length > 0) {
+                sample = JSON.stringify(data.slice(0, 2));
+              }
+              triggerToast('Structure non reconnue', `La feuille a répondu mais aucune carte n'a été trouvée. Échantillon : ${sample.slice(0, 60)}...`, 'error');
             }
           } catch(err) {
             console.error(err);
@@ -931,172 +1269,33 @@
           }
         };
 
-        const totalCardsInAlbum = computed(() => countries.value.reduce((acc, c) => acc + c.cardCount, 0));
-
-        const totalUniqueOwned = computed(() => {
-          let count = 0;
-          countries.value.forEach(c => {
-            for (let i = 1; i <= c.cardCount; i++) {
-              if (getQuantity(c.code, i) > 0) count++;
-            }
-          });
-          return count;
-        });
-
-        const totalMissingCount = computed(() => totalCardsInAlbum.value - totalUniqueOwned.value);
-
-        const totalDuplicatesCount = computed(() => {
-          let dupes = 0;
-          countries.value.forEach(c => {
-            for (let i = 1; i <= c.cardCount; i++) {
-              const q = getQuantity(c.code, i);
-              if (q > 1) dupes += (q - 1);
-            }
-          });
-          return dupes;
-        });
-
-        const overallProgress = computed(() => totalCardsInAlbum.value ? Math.round((totalUniqueOwned.value / totalCardsInAlbum.value) * 100) : 0);
-
-        const getCountryOwnedCount = (code) => {
-          const country = countries.value.find(c => c.code === code);
-          if (!country) return 0;
-          let count = 0;
-          for (let i = 1; i <= country.cardCount; i++) {
-            if (getQuantity(code, i) > 0) count++;
-          }
-          return count;
-        };
-
-        const getCountryDuplicatesCount = (code) => {
-          const country = countries.value.find(c => c.code === code);
-          if (!country) return 0;
-          let dupes = 0;
-          for (let i = 1; i <= country.cardCount; i++) {
-            const q = getQuantity(code, i);
-            if (q > 1) dupes += (q - 1);
-          }
-          return dupes;
-        };
-
-        const getSelectedCountryMaxCard = () => {
-          const c = countries.value.find(x => x.code === quickForm.value.countryCode);
-          return c ? c.cardCount : 20;
-        };
-
-        const filteredCountries = computed(() => {
-          return countries.value.filter(country => {
-            if (selectedCountryCode.value !== 'ALL' && country.code !== selectedCountryCode.value) return false;
-            if (searchQuery.value.trim()) {
-              const q = searchQuery.value.toUpperCase();
-              const nameMatch = country.name.toUpperCase().includes(q) || country.code.includes(q);
-              let cardMatch = false;
-              for (let i = 1; i <= country.cardCount; i++) {
-                if (`${country.code} ${i}`.includes(q) || `${country.code}${i}`.includes(q)) {
-                  cardMatch = true; break;
-                }
-              }
-              if (!nameMatch && !cardMatch) return false;
-            }
-            return true;
-          });
-        });
-
-        const getCardsForCountry = (country) => {
-          const cards = [];
-          for (let i = 1; i <= country.cardCount; i++) {
-            const qty = getQuantity(country.code, i);
-            if (filterStatus.value === 'missing' && qty !== 0) continue;
-            if (filterStatus.value === 'owned' && qty === 0) continue;
-            if (filterStatus.value === 'duplicate' && qty < 2) continue;
-
-            if (searchQuery.value.trim()) {
-              const q = searchQuery.value.toUpperCase();
-              if (!`${country.code} ${i}`.includes(q) && !`${country.code}${i}`.includes(q) && !country.name.toUpperCase().includes(q)) continue;
-            }
-            cards.push(i);
-          }
-          return cards;
-        };
-
-        const getCardGridClass = (code, num) => {
-          const qty = getQuantity(code, num);
-          if (qty === 0) return 'bg-slate-900/60 border-slate-700/60 text-slate-500 hover:border-amber-500/50';
-          if (qty === 1) return 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:border-emerald-400';
-          return 'bg-red-950/50 border-red-500/70 text-red-200 badge-shiny hover:border-red-400';
-        };
-
-        const duplicatesTextFormatted = computed(() => {
-          let result = [];
-          countries.value.forEach(c => {
-            let countryDupes = [];
-            for (let i = 1; i <= c.cardCount; i++) {
-              const q = getQuantity(c.code, i);
-              if (q > 1) {
-                const extra = q - 1;
-                countryDupes.push(extra > 1 ? `${c.code} ${i} (x${extra})` : `${c.code} ${i}`);
-              }
-            }
-            if (countryDupes.length > 0) result.push(`${c.flag} ${c.name}: ` + countryDupes.join(', '));
-          });
-          return result.length > 0 ? result.join('\n') : 'Aucun double disponible.';
-        });
-
-        const missingTextFormatted = computed(() => {
-          let result = [];
-          countries.value.forEach(c => {
-            let countryMissing = [];
-            for (let i = 1; i <= c.cardCount; i++) {
-              if (getQuantity(c.code, i) === 0) countryMissing.push(`${c.code} ${i}`);
-            }
-            if (countryMissing.length > 0) result.push(`${c.flag} ${c.name}: ` + countryMissing.join(', '));
-          });
-          return result.length > 0 ? result.join('\n') : 'Album 100% complet ! 🎉';
-        });
-
-        const partnerMatches = computed(() => {
-          if (!partnerText.value.trim()) return [];
-          const regex = /([A-Za-z]{2,4})\s*(\d+)/g;
-          let match;
-          const found = new Set();
-          while ((match = regex.exec(partnerText.value)) !== null) {
-            const code = match[1].toUpperCase();
-            const num = parseInt(match[2], 10);
-            if (getQuantity(code, num) === 0 && countries.value.some(c => c.code === code)) {
-              found.add(`${code} ${num}`);
-            }
-          }
-          return Array.from(found);
-        });
-
-        const acceptMatchedCards = () => {
-          if (partnerMatches.value.length === 0) return;
-          partnerMatches.value.forEach(cardCodeStr => {
-            const parts = cardCodeStr.split(' ');
-            if (parts.length === 2) quickIncrement(parts[0], parseInt(parts[1], 10));
-          });
-          triggerToast('Échange Validé !', `${partnerMatches.value.length} nouvelle(s) carte(s) ajoutée(s) !`, 'success');
-          partnerText.value = '';
-        };
-
-        const copyToClipboard = (text, message) => {
-          if (!text) return;
-          navigator.clipboard.writeText(text);
-          triggerToast('Copié !', message, 'success');
-        };
-
         const appScriptCode = ref(`function doGet(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Collection") || ss.getSheets()[0];
-  var data = sheet.getDataRange().getValues();
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Collection") 
+             || ss.getSheetByName("Panini") 
+             || ss.getSheetByName("Feuille 1") 
+             || ss.getSheetByName("Sheet1") 
+             || ss.getSheets()[0];
+             
+    var data = sheet.getDataRange().getValues();
+    return ContentService.createTextOutput(JSON.stringify(data))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function doPost(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("Collection") || ss.getSheets()[0];
+    var sheet = ss.getSheetByName("Collection") 
+             || ss.getSheetByName("Panini") 
+             || ss.getSheetByName("Feuille 1") 
+             || ss.getSheetByName("Sheet1") 
+             || ss.getSheets()[0];
+             
     var payload = JSON.parse(e.postData.contents);
     
     sheet.clear();
@@ -1133,11 +1332,9 @@ function doPost(e) {
         };
 
         const resetCollectionData = () => {
-          if (confirm('Réinitialiser la collection locale à 0 ?')) {
-            inventory.value = {};
-            localStorage.removeItem('panini_inventory');
-            triggerToast('Réinitialisation', 'Inventaire réinitialisé.', 'info');
-          }
+          inventory.value = {};
+          localStorage.removeItem('panini_inventory');
+          triggerToast('Réinitialisation', 'Inventaire réinitialisé.', 'info');
         };
 
         const checkAlbumCompletion = () => {
@@ -1149,13 +1346,21 @@ function doPost(e) {
 
         onMounted(() => {
           loadSavedState();
-          lucide.createIcons();
+          if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+          }
           if (sheetsConfig.value.webAppUrl) {
             fetchFromSheets();
           }
         });
 
-        watch(activeTab, () => setTimeout(() => lucide.createIcons(), 50));
+        watch(activeTab, () => {
+          setTimeout(() => {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+              lucide.createIcons();
+            }
+          }, 50);
+        });
 
         return {
           activeTab,
